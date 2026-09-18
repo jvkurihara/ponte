@@ -1,0 +1,62 @@
+generator client {
+  provider = "prisma-client-js"
+}
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+enum TransferStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  FAILED
+}
+model User {
+  id              String              @id @default(uuid()) @db.Uuid
+  email           String              @unique @db.VarChar(254)
+  passwordHash    String
+  emailVerifiedAt DateTime?
+  createdAt       DateTime            @default(now())
+  sessions        Session[]
+  tokens          VerificationToken[]
+  sent            Transfer[]          @relation("sent")
+  received        Transfer[]          @relation("received")
+}
+model Session {
+  id        String   @id @default(uuid()) @db.Uuid
+  tokenHash String   @unique @db.Char(64)
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  @@index([userId])
+  @@index([expiresAt])
+}
+model VerificationToken {
+  id        String   @id @default(uuid()) @db.Uuid
+  tokenHash String   @unique @db.Char(64)
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  @@index([userId])
+  @@index([expiresAt])
+}
+model Transfer {
+  id            String         @id @default(uuid()) @db.Uuid
+  senderId      String         @db.Uuid
+  receiverId    String         @db.Uuid
+  sender        User           @relation("sent", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver      User           @relation("received", fields: [receiverId], references: [id], onDelete: Cascade)
+  fileName      String         @db.VarChar(255)
+  fileSize      BigInt
+  mimeType      String         @db.VarChar(255)
+  bytesReceived BigInt         @default(0)
+  status        TransferStatus @default(PENDING)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  completedAt   DateTime?
+  @@index([senderId, createdAt])
+  @@index([receiverId, createdAt])
+}

@@ -1,0 +1,41 @@
+name: Build and test
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: ponte
+          POSTGRES_PASSWORD: ponte_local
+          POSTGRES_DB: ponte
+        ports: [5432:5432]
+        options: --health-cmd "pg_isready -U ponte" --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: |
+          cp apps/server/.env.example apps/server/.env
+          sed -i 's/SMTP_PORT=1025/SMTP_PORT=2525/' apps/server/.env
+      - run: npm run db:generate && npm run db:migrate
+      - run: npm run typecheck && npm test && npm run build
+      - run: npx playwright install --with-deps chromium
+      - name: Integration and browser tests
+        run: |
+          npm run test:mail > /tmp/ponte-mail.log 2>&1 &
+          npm run dev > /tmp/ponte-app.log 2>&1 &
+          for i in $(seq 1 40); do curl -fsS http://localhost:5173/api/health && break || sleep 1; done
+          npm run test:integration
+          npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-failure
+          path: test-results/

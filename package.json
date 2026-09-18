@@ -1,0 +1,37 @@
+{
+  "name": "ponte",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Transfer\u00eancia de arquivos entre dispositivos com WebRTC, grava\u00e7\u00e3o em disco e contas verificadas.",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -k -n api,web \"npm run dev -w @ponte/server\" \"npm run dev -w @ponte/web\"",
+    "build": "npm run build -w @ponte/server && npm run build -w @ponte/web",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "start": "npm run start -w @ponte/server",
+    "db:generate": "npm run db:generate -w @ponte/server",
+    "db:migrate": "npm run db:migrate -w @ponte/server",
+    "test": "node --import tsx --test apps/server/test/*.test.ts tests/protocol.test.ts",
+    "test:integration": "node --import tsx --test tests/integration.test.ts",
+    "test:e2e": "playwright test",
+    "smtp:check": "npm run smtp:check -w @ponte/server",
+    "test:mail": "node scripts/test-mail.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.0",
+    "@types/node": "^22.18.0",
+    "concurrently": "^9.2.0",
+    "smtp-server": "^3.19.13",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0"
+  },
+  "overrides": {
+    "deepmerge-ts": "^8.0.2"
+  }
+}
